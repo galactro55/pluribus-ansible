@@ -19,6 +19,8 @@
         pn_fabric_name: 'spine-l2-fabric'              # Name of the fabric to create/join.
         pn_current_switch: "{{ inventory_hostname }}"  # Name of the switch on which this task is currently getting executed.
         pn_spine_list: "{{ groups['spine'] }}"         # List of all spine switches mentioned under [spine] grp in hosts file.
+        pn_current_switch_ip: "{{ ansible_host }}"     # Mgmt-Ip address of current switch in which the task is being executed currently.
+        pn_current_switch_ip_netmask: '16'             # Netmask for assigning static mgmt-ip address to a switch
         # pn_toggle_40g: True                          # Flag to indicate if 40g ports should be converted to 10g ports or not.
         # pn_inband_ip: '172.16.1.0/24'                # Inband ips to be assigned to switches starting with this value. Default: 172.16.0.0/24.
         # pn_fabric_network: 'mgmt'                    # Choices: in-band or mgmt.  Default: mgmt
@@ -65,6 +67,8 @@
         pn_fabric_name: 'leaf-l2-fabric'               # Name of the fabric to create/join.
         pn_current_switch: "{{ inventory_hostname }}"  # Name of the switch on which this task is currently getting executed.
         pn_leaf_list: "{{ groups['leaf'] }}"           # List of all leaf switches mentioned under [leaf] grp in hosts file.
+        pn_current_switch_ip: "{{ ansible_host }}"     # Mgmt-Ip address of current switch in which the task is being executed currently.
+        pn_current_switch_ip_netmask: '16'             # Netmask for assigning static mgmt-ip address to a switch
         # pn_toggle_40g: True                          # Flag to indicate if 40g ports should be converted to 10g ports or not.
         # pn_inband_ip: '172.16.1.0/24'                # Inband ips to be assigned to switches starting with this value. Default: 172.16.0.0/24.
         # pn_fabric_network: 'mgmt'                    # Choices: in-band or mgmt.  Default: mgmt

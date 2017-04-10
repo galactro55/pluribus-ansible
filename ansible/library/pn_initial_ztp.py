@@ -317,6 +317,25 @@ def modify_stp_local(module, modify_flag):
         return ' Already modified '
 
 
+def assign_static_mgmt_ip(module, current_switch):
+    """
+    Method to assign static management-ip to a switch.
+    :param module: The Ansible module to fetch input parameters.
+    :param current_switch: Switch in which the playbook is running.
+    :return: The response of assigning mgmt-ip.
+    """
+    ip = module.params['pn_current_switch_ip']
+    netmask = module.params['pn_current_switch_ip_netmask']
+    ip = ip + '/' + netmask
+
+    cli = pn_cli(module)
+    cli += ' switch-local switch-setup-modify mgmt-ip %s ' % ip
+    if 'successfully' in run_cli(module, cli):
+        output = ' %s: Assigned mgmt-ip %s \n' % (current_switch, ip)
+
+    return output
+
+
 def configure_control_network(module, network):
     """
     Method to configure the fabric control network.
@@ -482,7 +501,7 @@ def assign_inband_ip(module):
     """
     Method to assign in-band ips to switches.
     :param module: The Ansible module to fetch input parameters.
-    :return: String describing in-band ip got assigned or not.
+    :return: Assigned inband ip or None.
     """
     global CHANGED_FLAG
     address = module.params['pn_inband_ip'].split('.')
@@ -555,6 +574,8 @@ def main():
             pn_ntp_server=dict(required=False, type='str'),
             pn_web_api=dict(type='bool', default=True),
             pn_stp=dict(required=False, type='bool', default=False),
+            pn_current_switch_ip=dict(required=False, type='str'),
+            pn_current_switch_ip_netmask=dict(required=False, type='str'),
         )
     )
 
@@ -627,6 +648,9 @@ def main():
 
     # Assign in-band ips.
     message += assign_inband_ip(module)
+
+    # Assign static mgmt-ip
+    message += assign_static_mgmt_ip(module, current_switch)
 
     # Enable STP if flag is True
     if module.params['pn_stp']:
