@@ -1,0 +1,29 @@
+---
+
+
+- name: Switch Config Reset
+  hosts: all
+
+  vars_files:
+  - cli_vault.yml
+
+  tasks:
+    - name: Reset all switches
+      pn_switch_config_reset:
+        pn_cliusername: "{{ USERNAME }}"  # Cli username (value comes from cli_vault.yml).
+        pn_clipassword: "{{ PASSWORD }}"  # Cli password (value comes from cli_vault.yml).
+        pn_current_switch: "{{ inventory_hostname }}"  # Name of the switch on which this task is currently getting executed.
+      register: reset_out                 # Variable to hold/register output of the above tasks.
+      ignore_errors: yes
+
+    - name: Wait for nvOSd to reboot
+      pause:
+        minutes: 3                       # Pause playbook execution for specified amount of time.
+      when: reset_out.msg != ["Switch has been already reset."]
+
+    - name: Check nvOSd status (Retry until it's online)
+      command: service svc-nvOSd status
+      register: status
+      until: status.stdout == 'online'   # Keep on checking the nvOSd status until it's online.
+      retries: 10
+      changed_when: False

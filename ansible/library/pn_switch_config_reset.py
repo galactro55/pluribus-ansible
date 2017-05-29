@@ -66,12 +66,14 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             pn_cliusername=dict(required=False, type='str'),
-            pn_clipassword=dict(required=False, type='str', no_log=True)
+            pn_clipassword=dict(required=False, type='str', no_log=True),
+            pn_current_switch=dict(required=False, type='str'),
         )
     )
 
     username = module.params['pn_cliusername']
     password = module.params['pn_clipassword']
+    current_switch = module.params['pn_current_switch']
 
     if username and password:
         cli = '/usr/bin/cli --quiet --user %s:%s ' % (username, password)
@@ -86,34 +88,53 @@ def main():
     if err:
         if 'User authorization failed' in err:
             module.exit_json(
-                stdout='Switch has been already reset.',
-                error='0',
+                summary = [{
+                   'switch': current_switch,
+                   'output': 'Switch has been already reset.',
+                }],
                 failed=False,
-                changed=False
+                changed=False,
+                exception='',
+                task='Reset all switches',
+                msg='Switch has been already reset.'
             )
         elif 'nvOSd not running' in err:
             stdout_msg = 'Switch has been just reset. '
             stdout_msg += 'Please wait for nvOSd to reboot completely.'
             module.exit_json(
-                stdout=stdout_msg,
-                error='0',
+                summary = [{
+                   'switch': current_switch,
+                   'output': stdout_msg,
+                }],
                 failed=False,
-                changed=False
+                changed=False,
+                exception='',
+                task='Reset all switches',
+                msg=stdout_msg
             )
         else:
             module.exit_json(
-                error='1',
+                summary = [{
+                   'switch': current_switch,
+                   'output': 'Operation Failed: ' + str(cli),
+                }],
                 failed=True,
-                stderr=err.strip(),
+                exception=err.strip(),
                 msg='Operation Failed: ' + str(cli),
-                changed=False
+                changed=False,
+                task='Reset all switches',
             )
     else:
         module.exit_json(
-            stdout='Switch config reset completed successfully.',
-            error='0',
+            summary = [{
+               'switch': current_switch,
+               'output': 'Switch config reset completed successfully.',
+            }],
             failed=False,
-            changed=True
+            changed=True,
+            exception='',
+            task='Reset all switches',
+            msg='Switch config reset completed successfully.'
         )
 
 
