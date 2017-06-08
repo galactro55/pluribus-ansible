@@ -95,7 +95,7 @@ def service_start(module, service_name):
     return run_cli(module, cli)
 
 
-def service_checks(module, epocs, service_list):
+def is_service_online(module, epocs, service_list):
     """
     Method to check the status of the services and start if the 
     service is down.
@@ -107,7 +107,7 @@ def service_checks(module, epocs, service_list):
     if epocs == 0:
         return "Problem with services %s. " % service_list
     else:
-        bad_service_list = []
+        offline_service_list = []
         for service in service_list:
             output = check_service_status(module, service)
             output = output.strip()
@@ -115,14 +115,14 @@ def service_checks(module, epocs, service_list):
             if output == 'online' or 'is running' in output:
                 pass
             else:
-                bad_service_list.append(service)
-        if len(bad_service_list) == 0:
-            return "all services working"
+                offline_service_list.append(service)
+        if len(offline_service_list) == 0:
+            return True
         else:
-            for service in bad_service_list:
+            for service in offline_service_list:
                 service_start(module, service)
 
-        return service_checks(module, epocs - 1, bad_service_list)
+        return is_service_online(module, epocs - 1, offline_service_list)
 
 
 def wrapper_for_service_check(func):
@@ -133,12 +133,12 @@ def wrapper_for_service_check(func):
     :return: Helper function.
     """
     def main_wrapper(module, epocs, service_list):
-        output = service_checks(module, epocs, service_list)
-        if output == 'all services working':
+        output = is_service_online(module, epocs, service_list)
+        if output == True:
             output = func(module)
             return "switch-config-reset is done"
         else:
-            return output + "Please checks the services"
+            return output + "Please check the services. Switch reset failed."
 
     return main_wrapper
 
@@ -239,7 +239,7 @@ def main():
         changed=False,
         exception='',
         task='Reset all switches',
-        msg='Switch config reset completed unsuccessfully.'
+        msg='Switch config reset failed.'
         )
 
 
