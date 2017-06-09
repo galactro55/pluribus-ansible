@@ -1,0 +1,19 @@
+---
+
+- name: Full mesh vrouter-ping test
+  hosts: spine[0]
+  become: true
+  become_method: su
+  become_user: root
+
+  vars_files:
+  - cli_vault.yml
+
+  tasks:
+    - name: Full mesh vrouter-ping test
+      pn_vrouter_ping_test:
+        pn_cliusername: "{{ USERNAME }}"  # Cli username (value comes from cli_vault.yml).
+        pn_clipassword: "{{ PASSWORD }}"  # Cli password (value comes from cli_vault.yml).
+
+    - pause:
+        seconds: 2                        # Pause playbook execution for specified amount of time.
