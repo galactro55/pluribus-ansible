@@ -633,7 +633,7 @@ def main():
     if module.params['pn_web_api']:
         enable_web_api(module)
 
-    # Disable STP
+    # Enable STP
     if 'Success' in modify_stp_local(module, 'enable'):
         CHANGED_FLAG.append(True)
 
