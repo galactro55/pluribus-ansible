@@ -1,0 +1,34 @@
+---
+
+- name: Configure OSPF, SVI
+  hosts: all
+
+  vars_files:
+  - cli_vault.yml
+
+  vars:
+  - ospf_file: /etc/ansible/pluribus-ansible/ansible/ospf.csv
+  - vlan_file: /etc/ansible/pluribus-ansible/ansible/vlan.csv
+  - svi_file: /etc/ansible/pluribus-ansible/ansible/svi.csv
+
+  tasks:
+    - name: Create vlans
+      pn_vlan_creation:
+        pn_cliusername: "{{ USERNAME }}"
+        pn_clipassword: "{{ PASSWORD }}"
+        pn_switch: "{{ inventory_hostname }}"
+        pn_vlan_data: "{{ lookup('file', '{{ vlan_file }}') }}"
+
+    - name: Configure OSPF
+      pn_ospf_configuration:
+        pn_cliusername: "{{ USERNAME }}"
+        pn_clipassword: "{{ PASSWORD }}"
+        pn_switch: "{{ inventory_hostname }}"
+        pn_ospf_data: "{{ lookup('file', '{{ ospf_file }}') }}"
+
+    - name: Configure SVI
+      pn_svi_configuration:
+        pn_cliusername: "{{ USERNAME }}"
+        pn_clipassword: "{{ PASSWORD }}"
+        pn_switch: "{{ inventory_hostname }}"
+        pn_svi_data: "{{ lookup('file', '{{ svi_file }}') }}"

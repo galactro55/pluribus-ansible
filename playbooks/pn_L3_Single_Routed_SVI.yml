@@ -1,0 +1,19 @@
+---
+
+- name: Configure SVI
+  hosts: all
+
+  vars_files:
+  - cli_vault.yml
+
+  vars:
+  - svi_file: /etc/ansible/pluribus-ansible/ansible/svi.csv
+
+  tasks:
+    - name: Configure SVI
+      pn_svi_configuration:
+        pn_cliusername: "{{ USERNAME }}"
+        pn_clipassword: "{{ PASSWORD }}"
+        pn_switch: "{{ inventory_hostname }}"
+        pn_svi_data: "{{ lookup('file', '{{ svi_file }}') }}"
+        # pn_bfd: False

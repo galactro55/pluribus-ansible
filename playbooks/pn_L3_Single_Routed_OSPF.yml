@@ -1,0 +1,19 @@
+---
+
+- name: Configure OSPF
+  hosts: all
+
+  vars_files:
+  - cli_vault.yml
+
+  vars:
+  - ospf_file: /etc/ansible/pluribus-ansible/ansible/ospf.csv
+
+  tasks:
+    - name: Configure OSPF
+      pn_ospf_configuration:
+        pn_cliusername: "{{ USERNAME }}"
+        pn_clipassword: "{{ PASSWORD }}"
+        pn_switch: "{{ inventory_hostname }}"
+        pn_ospf_data: "{{ lookup('file', '{{ ospf_file }}') }}"
+        # pn_bfd: False

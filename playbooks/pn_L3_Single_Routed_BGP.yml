@@ -1,0 +1,18 @@
+---
+
+- name: Configure eBGP
+  hosts: all
+
+  vars_files:
+  - cli_vault.yml
+
+  vars:
+  - bgp_file: /etc/ansible/pluribus-ansible/ansible/bgp.csv
+
+  tasks:
+    - name: Configure eBGP
+      pn_ebgp_configuration:
+        pn_cliusername: "{{ USERNAME }}"
+        pn_clipassword: "{{ PASSWORD }}"
+        pn_switch: "{{ inventory_hostname }}"
+        pn_bgp_data: "{{ lookup('file', '{{ bgp_file }}') }}"
