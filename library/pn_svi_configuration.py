@@ -44,9 +44,9 @@ options:
         - Name of the switch on which this task is currently getting executed.
       required: True
       type: str
-    pn_bgp_data:
+    pn_svi_data:
       description:
-        - String containing trunk data parsed from csv file.
+        - String containing SVI data parsed from csv file.
       required: False
       type: str
       default: ''
@@ -146,15 +146,14 @@ def run_cli(module, cli):
 
 def svi_configuration(module, ip_gateway, switch, vlan_id):
     """
-    Method to configure vrrp for non-cluster switches.
+    Method to configure SVI inerface in the switch..
     :param module: The Ansible module to fetch input parameters.
-    :param ip: IP address for the default gateway
-    :param non_cluster_leaf: Name of non-cluster leaf switch.
+    :param ip_gateway: IP address for the default gateway
+    :param switch: Name of switch.
     :param vlan_id: The vlan id to be assigned.
-    :return: String describing whether interfaces got added or not.
+    :return: String describing whether interface got added or not.
     """
     global CHANGED_FLAG
-
 
     cli = pn_cli(module)
     clicopy = cli

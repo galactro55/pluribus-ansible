@@ -24,7 +24,7 @@ from ansible.module_utils.basic import AnsibleModule
 
 DOCUMENTATION = """
 ---
-module: pn_ebgp_configuration
+module: pn_ospf_configuration
 author: 'Pluribus Networks (devops@pluribusnetworks.com)'
 description: Module to configure OSPF.
 OSPF csv file format: l3_port, interface_ip, ospf_network, area_id.
@@ -46,15 +46,21 @@ options:
       type: str
     pn_ospf_data:
       description:
-        - String containing trunk data parsed from csv file.
+        - String containing ospf data parsed from csv file.
       required: False
       type: str
       default: ''
+    pn_router_id:
+      description:
+        - String containing router-id for the vrouter.
+      required: False
+      type: str
+      default: '10.10.10.10'
 """
 
 EXAMPLES = """
-- name: Configure eBGP
-  pn_ebgp_creation:
+- name: Configure OSPF
+  pn_ospf_creation:
     pn_cliusername: "{{ USERNAME }}"
     pn_clipassword: "{{ PASSWORD }}"
     pn_switch: "{{ inventory_hostname }}"
@@ -146,7 +152,7 @@ def run_cli(module, cli):
 
 def create_vrouter(module, vrouter_name, vnet_name):
     """
-    Create a hardware vrouter using vrrp id.
+    Create a hardware vrouter.
     :param module: The Ansible module to fetch input parameters.
     :param vrouter_name: Name of the vrouter to create.
     :param vnet_name: Vnet name required for vrouter creation.
@@ -184,6 +190,7 @@ def vrouter_interface_ospf_add(module, switch_name, l3_port, interface_ip, ospf_
     Method to create interfaces and add ibgp neighbors.
     :param module: The Ansible module to fetch input parameters.
     :param switch_name: The name of the switch to run interface.
+    :param l3_port: The l3_port number to create the vrouter interface.
     :param interface_ip: Interface ip to create a vrouter interface.
     :param neighbor_ip: Neighbor_ip for the ibgp neighbor.
     :param remote_as: Bgp-as for remote switch.
@@ -228,7 +235,7 @@ def vrouter_interface_ospf_add(module, switch_name, l3_port, interface_ip, ospf_
 
         if 'Success' in run_cli(module, cli):
             output += ' Added ospf neighbor %s for %s \n' % (ospf_network,
-                                                                 vrouter)
+                                                             vrouter)
             CHANGED_FLAG.append(True)
 
     return output
@@ -276,11 +283,17 @@ def delete_trunk(module, switch, switch_port):
 
 
 def ospf_configuration(module):
+    """
+    Method to configure create interfaces and configure OSPF.
+    :param module: The Ansible module to fetch input parameters.
+    :return: String containing output of all the commands.
+    """
     output = ''
     cli = pn_cli(module)
     clicopy = cli
     switch = module.params['pn_switch']
     vrouter_name = switch + '-vrouter'
+    router_id = module.params['pn_router_id']
 
     cli = clicopy
     cli += ' fabric-node-show format fab-name no-show-headers '
@@ -307,8 +320,28 @@ def ospf_configuration(module):
                 ospf_network = elements.pop(0)
                 area_id = elements.pop(0)
 
+    cli = clicopy
+    cli += ' vrouter-modify name %s router-id %s ' % (vrouter_name, router_id)
+    if 'Success' in run_cli(module, cli):
+        output += ' Added router-id %s \n' % router_id
+
+    cli = clicopy
+    cli += ' vrouter-loopback-interface-show ip ' + router_id
+    cli += ' format switch no-show-headers '
+    existing_vrouter = run_cli(module, cli)
+
+    if vrouter_name not in existing_vrouter:
+        cli = clicopy
+        cli += ' vrouter-loopback-interface-add vrouter-name '
+        cli += vrouter_name
+        cli += ' ip ' + router_id
+        cli += ' index 1'
+        if 'Success' in run_cli(module, cli):
+            output += 'Added loopback ip %s to %s\n' % (router_id, vrouter_name)
+
     delete_trunk(module, switch, l3_port)
-    output += vrouter_interface_ospf_add(module, switch, l3_port, interface_ip, ospf_network, area_id)
+    output += vrouter_interface_ospf_add(module, switch, l3_port, interface_ip,
+                                         ospf_network, area_id)
 
     return output
 
@@ -321,6 +354,7 @@ def main():
             pn_clipassword=dict(required=False, type='str', no_log=True),
             pn_switch=dict(required=True, type='str'),
             pn_ospf_data=dict(required=False, type='str', default=''),
+            pn_router_id=dict(required=False, type='str', default='10.10.10.10'),
         )
     )
 
@@ -340,7 +374,7 @@ def main():
     # Exit the module and return the required JSON.
     module.exit_json(
         unreachable=False,
-        msg= 'OSPF configuration succeeded',
+        msg='OSPF configuration succeeded',
         summary=results,
         exception='',
         failed=False,

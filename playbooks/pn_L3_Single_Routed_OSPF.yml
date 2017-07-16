@@ -16,4 +16,4 @@
         pn_clipassword: "{{ PASSWORD }}"
         pn_switch: "{{ inventory_hostname }}"
         pn_ospf_data: "{{ lookup('file', '{{ ospf_file }}') }}"
-        # pn_bfd: False
+        pn_router_id: '10.10.10.10'

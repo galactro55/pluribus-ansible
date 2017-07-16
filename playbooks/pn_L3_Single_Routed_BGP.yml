@@ -16,3 +16,4 @@
         pn_clipassword: "{{ PASSWORD }}"
         pn_switch: "{{ inventory_hostname }}"
         pn_bgp_data: "{{ lookup('file', '{{ bgp_file }}') }}"
+        pn_router_id: '10.10.10.10'
