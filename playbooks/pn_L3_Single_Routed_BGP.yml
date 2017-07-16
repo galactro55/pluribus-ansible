@@ -8,12 +8,18 @@
 
   vars:
   - bgp_file: /etc/ansible/pluribus-ansible/ansible/bgp.csv
+  - vrouter_file: /etc/ansible/pluribus-ansible/ansible/vrouter.csv
 
   tasks:
+    - name: Create vrouter
+      pn_vrouter_creation:
+        pn_cliusername: "{{ USERNAME }}"
+        pn_clipassword: "{{ PASSWORD }}"
+        pn_vrouter_data: "{{ lookup('file', '{{ vrouter_file }}') }}"
+
     - name: Configure eBGP
       pn_ebgp_configuration:
         pn_cliusername: "{{ USERNAME }}"
         pn_clipassword: "{{ PASSWORD }}"
-        pn_switch: "{{ inventory_hostname }}"
         pn_bgp_data: "{{ lookup('file', '{{ bgp_file }}') }}"
-        pn_router_id: '10.10.10.10'
+        pn_switch_list: "{{ groups['switch'] }}" 

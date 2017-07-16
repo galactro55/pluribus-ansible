@@ -133,7 +133,7 @@ def run_cli(module, cli):
         return out
     if err:
         json_msg = {
-            'switch': module.params['pn_switch'],
+            'switch': '',
             'output': u'Operation Failed: {}'.format(' '.join(cli))
         }
         results.append(json_msg)
@@ -150,42 +150,8 @@ def run_cli(module, cli):
         return 'Success'
 
 
-def create_vrouter(module, vrouter_name, vnet_name):
-    """
-    Create a hardware vrouter.
-    :param module: The Ansible module to fetch input parameters.
-    :param vrouter_name: Name of the vrouter to create.
-    :param vnet_name: Vnet name required for vrouter creation.
-    :return: String describing if vrouter got created or not.
-    """
-    global CHANGED_FLAG
-    output = ''
-    new_vrouter = False
-
-    # Check if vrouter already exists
-    cli = pn_cli(module)
-    cli += ' vrouter-show format name no-show-headers '
-    existing_vrouter_names = run_cli(module, cli)
-
-    if existing_vrouter_names is not None:
-        existing_vrouter_names = existing_vrouter_names.split()
-        if vrouter_name not in existing_vrouter_names:
-            new_vrouter = True
-
-    if new_vrouter or existing_vrouter_names is None:
-        cli = pn_cli(module)
-        cli += ' vrouter-create name %s ' % vrouter_name
-        cli += ' vnet %s enable ' % (vnet_name)
-        cli += ' router-type hardware '
-        run_cli(module, cli)
-        CHANGED_FLAG.append(True)
-        output += 'Created vrouter with name %s\n' % vrouter_name
-
-    return output
-
-
 def vrouter_interface_bgp_add(module, switch_name, l3_port, interface_ip,
-                              neighbor_ip, remote_as):
+                              vrouter, neighbor_ip, remote_as):
     """
     Method to create interfaces and add bgp neighbors.
     :param module: The Ansible module to fetch input parameters.
@@ -202,11 +168,6 @@ def vrouter_interface_bgp_add(module, switch_name, l3_port, interface_ip,
     clicopy = cli
 
     cli = clicopy
-    cli += ' vrouter-show location %s format name' % switch_name
-    cli += ' no-show-headers'
-    vrouter = run_cli(module, cli).split()[0]
-
-    cli = clicopy
     cli += ' vrouter-interface-show ip %s l3-port %s' % (interface_ip, l3_port)
     cli += ' format switch no-show-headers'
     existing_vrouter_interface = run_cli(module, cli).split()
@@ -218,8 +179,8 @@ def vrouter_interface_bgp_add(module, switch_name, l3_port, interface_ip,
         )
         run_cli(module, cli)
 
-        output += ' Added vrouter interface with ip %s on %s \n' % (
-            interface_ip, vrouter
+        output += '%s: Added vrouter interface with ip %s on %s \n' % (
+            switch_name, interface_ip, vrouter
         )
         CHANGED_FLAG.append(True)
 
@@ -236,8 +197,8 @@ def vrouter_interface_bgp_add(module, switch_name, l3_port, interface_ip,
                                               remote_as)
 
         if 'Success' in run_cli(module, cli):
-            output += ' Added BGP neighbor %s for %s \n' % (neighbor_ip,
-                                                            vrouter)
+            output += '%s: Added BGP neighbor %s for %s \n' % (switch_name,
+                                                               neighbor_ip, vrouter)
             CHANGED_FLAG.append(True)
 
     return output
@@ -293,20 +254,11 @@ def bgp_configuration(module):
     output = ''
     cli = pn_cli(module)
     clicopy = cli
-    switch = module.params['pn_switch']
-    vrouter_name = switch + '-vrouter'
-    router_id = module.params['pn_router_id']
-
-    cli = clicopy
-    cli += ' fabric-node-show format fab-name no-show-headers '
-    fabric_name = list(set(run_cli(module, cli).split()))[0]
-
-    # Create vrouter
-    vnet_name = fabric_name + '-global'
-    output += create_vrouter(module, vrouter_name, vnet_name)
+    switch_list = module.params['pn_switch_list']
 
     # Disable auto trunk on all switches.
-    modify_auto_trunk_setting(module, switch, 'disable')
+    for switch in switch_list:
+        modify_auto_trunk_setting(module, switch, 'disable')
 
     bgp_data = module.params['pn_bgp_data']
     if bgp_data:
@@ -317,40 +269,27 @@ def bgp_configuration(module):
                 continue
             else:
                 elements = row.split(',')
+                switch = elements.pop(0)
                 l3_port = elements.pop(0)
                 interface_ip = elements.pop(0)
                 bgp_as = elements.pop(0)
                 neighbor_ip = elements.pop(0)
                 remote_as = elements.pop(0)
 
-    cli = clicopy
-    cli += ' vrouter-modify name %s ' % vrouter_name
-    cli += ' bgp-as %s ' % bgp_as
-    if 'Success' in run_cli(module, cli):
-        output += ' Added bgp_as %s \n' % (bgp_as)
+                cli = clicopy
+                cli += ' vrouter-show location %s ' % switch
+                cli += ' format name no-show-headers '
+                vrouter_name = run_cli(module, cli).split()[0]
 
-    cli = clicopy
-    cli += ' vrouter-modify name %s router-id %s ' % (vrouter_name, router_id)
-    if 'Success' in run_cli(module, cli):
-        output += ' Added router-id %s \n' % router_id
-
-    cli = clicopy
-    cli += ' vrouter-loopback-interface-show ip ' + router_id
-    cli += ' format switch no-show-headers '
-    existing_vrouter = run_cli(module, cli)
-
-    if vrouter_name not in existing_vrouter:
-        cli = clicopy
-        cli += ' vrouter-loopback-interface-add vrouter-name '
-        cli += vrouter_name
-        cli += ' ip ' + router_id
-        cli += ' index 1'
-        if 'Success' in run_cli(module, cli):
-            output += 'Added loopback ip %s to %s\n' % (router_id, vrouter_name)
-
-    delete_trunk(module, switch, l3_port)
-    output += vrouter_interface_bgp_add(module, switch, l3_port, interface_ip,
-                                        neighbor_ip, remote_as)
+                cli = clicopy
+                cli += ' vrouter-modify name %s ' % vrouter_name
+                cli += ' bgp-as %s ' % bgp_as
+                if 'Success' in run_cli(module, cli):
+                    output += '%s: Added bgp_as %s \n' % (switch, bgp_as)
+            
+                delete_trunk(module, switch, l3_port)
+                output += vrouter_interface_bgp_add(module, switch, l3_port, interface_ip,
+                                                    vrouter_name, neighbor_ip, remote_as)
 
     return output
 
@@ -361,9 +300,8 @@ def main():
         argument_spec=dict(
             pn_cliusername=dict(required=False, type='str'),
             pn_clipassword=dict(required=False, type='str', no_log=True),
-            pn_switch=dict(required=True, type='str'),
+            pn_switch_list=dict(required=True, type='list'),
             pn_bgp_data=dict(required=False, type='str', default=''),
-            pn_router_id=dict(required=False, type='str', default='10.10.10.10'),
         )
     )
 
@@ -374,11 +312,10 @@ def main():
     message += bgp_configuration(module)
 
     for line in message.splitlines():
-        if line:
-            results.append({
-                'switch': module.params['pn_switch'],
-                'output': line
-            })
+        if ': ' in line:
+            return_msg = line.split(':')
+            json_msg = {'switch' : return_msg[0].strip() , 'output' : return_msg[1].strip() }
+            results.append(json_msg)
 
     # Exit the module and return the required JSON.
     module.exit_json(

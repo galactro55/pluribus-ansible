@@ -1,6 +1,6 @@
 ---
 
-- name: Configure OSPF, SVI
+- name: Configure OSPF, VRRP
   hosts: all
 
   vars_files:
@@ -8,9 +8,9 @@
 
   vars:
   - ospf_file: /etc/ansible/pluribus-ansible/ansible/ospf.csv
-  - vlan_file: /etc/ansible/pluribus-ansible/ansible/vlan.csv
-  - svi_file: /etc/ansible/pluribus-ansible/ansible/svi.csv
   - vrouter_file: /etc/ansible/pluribus-ansible/ansible/vrouter.csv
+  - vlan_file: /etc/ansible/pluribus-ansible/ansible/vlan.csv
+  - vrrp_file: /etc/ansible/pluribus-ansible/ansible/vrrp.csv
 
   tasks:
     - name: Create vlans
@@ -19,6 +19,13 @@
         pn_clipassword: "{{ PASSWORD }}"
         pn_switch: "{{ inventory_hostname }}"
         pn_vlan_data: "{{ lookup('file', '{{ vlan_file }}') }}"
+
+    - name: Configure L2 VRRP on cluster switch
+      pn_vrrp_creation:
+        pn_cliusername: "{{ USERNAME }}"
+        pn_clipassword: "{{ PASSWORD }}"
+        pn_switch: "{{ inventory_hostname }}"
+        pn_vrrp_data: "{{ lookup('file', '{{ vrrp_file }}') }}"
 
     - name: Create vrouter
       pn_vrouter_creation:
@@ -33,9 +40,9 @@
         pn_ospf_data: "{{ lookup('file', '{{ ospf_file }}') }}"
         pn_switch_list: "{{ groups['switch'] }}"
 
-    - name: Configure SVI
-      pn_svi_configuration:
-        pn_cliusername: "{{ USERNAME }}"
-        pn_clipassword: "{{ PASSWORD }}"
-        pn_switch: "{{ inventory_hostname }}"
-        pn_svi_data: "{{ lookup('file', '{{ svi_file }}') }}"
+#    - name: Configure L2 VRRP on cluster switch
+#      pn_vrrp_creation:
+#        pn_cliusername: "{{ USERNAME }}"
+#        pn_clipassword: "{{ PASSWORD }}"
+#        pn_switch: "{{ inventory_hostname }}"
+#        pn_vrrp_data: "{{ lookup('file', '{{ vrrp_file }}') }}"
