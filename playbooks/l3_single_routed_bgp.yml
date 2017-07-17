@@ -1,0 +1,23 @@
+---
+
+- name: Configure eBGP
+  hosts: switch[0]
+
+  vars_files:
+  - cli_vault.yml
+
+  tasks:
+    - name: Create vrouter
+      pn_vrouter_creation:
+        pn_cliusername: "{{ USERNAME }}"
+        pn_clipassword: "{{ PASSWORD }}"
+        #pn_loopback_ip: '10.10.10.10'
+        #pn_vrrp_id: '18'
+        pn_switch_list: "{{ groups['switch'] }}"
+
+    - name: Configure eBGP
+      pn_ebgp_configuration:
+        pn_cliusername: "{{ USERNAME }}"
+        pn_clipassword: "{{ PASSWORD }}"
+        pn_bgp_data: "{{ lookup('file', '{{ bgp_file }}') }}"
+        pn_switch_list: "{{ groups['switch'] }}" 
