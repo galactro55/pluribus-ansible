@@ -7,7 +7,7 @@
 # pn_cliusername and pn_clipassword comes from vars file - cli_vault.yml
 # If the tasks fails then it will retry as specified by retries count.
 - name: Zero Touch Provisioning - Initial setup
-  hosts: spine, leaf
+  hosts: all
   serial: 1
   become: true
   # become_method: su
