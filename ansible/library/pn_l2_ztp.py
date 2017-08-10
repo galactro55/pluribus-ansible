@@ -315,6 +315,7 @@ def configure_trunk(module, cluster_node, switch_list):
         switch_names += str(switch)
 
     src_ports = list(set(src_ports))
+    src_ports = filter(lambda l: l != 'Success', src_ports)
     name = cluster_node + '-to-' + switch_names
     if len(name) > 59:
         name = name[:59]
